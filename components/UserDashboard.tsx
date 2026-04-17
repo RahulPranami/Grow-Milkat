@@ -34,7 +34,6 @@ import {
   Users, Clock, Camera, Video, Play, Facebook, Instagram, Twitter, Linkedin, MessageCircle, Copy,
   BarChart3, Bookmark
 } from 'lucide-react';
-import { getInvestmentInsights } from '../services/geminiService';
 
 interface UserDashboardProps {
   opportunities: Opportunity[];
@@ -94,8 +93,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [quickInvestOpp, setQuickInvestOpp] = useState<Opportunity | null>(null);
-  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
-  const [loadingAI, setLoadingAI] = useState(false);
   const [investAmount, setInvestAmount] = useState<number>(0);
   const [filterType, setFilterType] = useState<string>('All');
   const [payoutFilter, setPayoutFilter] = useState<string>('All');
@@ -2460,38 +2457,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
                   </div>
                 </div>
               )}
-
-              {/* AI Insights Section */}
-              <div className="bg-slate-900 p-10 rounded-[3rem] text-white space-y-8">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400">
-                    <Zap className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-xl font-bold serif">Gemini AI Analysis</h3>
-                </div>
-                {loadingAI ? (
-                  <div className="grid md:grid-cols-3 gap-6">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="h-32 bg-white/5 rounded-2xl animate-pulse" />
-                    ))}
-                  </div>
-                ) : aiAnalysis && (
-                  <div className="grid md:grid-cols-3 gap-8">
-                    <div className="space-y-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Risk Assessment</p>
-                      <p className="text-sm text-slate-300 leading-relaxed">{aiAnalysis.riskAnalysis}</p>
-                    </div>
-                    <div className="space-y-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Market Potential</p>
-                      <p className="text-sm text-slate-300 leading-relaxed">{aiAnalysis.marketPotential}</p>
-                    </div>
-                    <div className="space-y-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">Strategic Fit</p>
-                      <p className="text-sm text-slate-300 leading-relaxed">{aiAnalysis.strategicFit}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           ) : (
             <>
@@ -3014,9 +2979,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
                           <h3 className="text-lg font-bold serif">Personalized Suggestions</h3>
                           <p className="text-xs text-slate-500">Curated opportunities to help you bridge your ${(goalInsights?.needed ?? 0).toLocaleString()} gap.</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                           <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">AI Optimized</span>
-                        </div>
                       </div>
 
                       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-2 px-2 snap-x">
@@ -3212,27 +3174,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
                                <TrendingUp className="w-4 h-4 text-emerald-600" />
                                <p className="text-emerald-600 font-black text-lg">{selectedOpp.expectedROI} Return</p>
                              </div>
-                          </div>
-
-                          <div className="space-y-4">
-                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                               <Zap className="w-4 h-4 text-amber-500" /> AI Insights
-                             </h4>
-                             {loadingAI ? (
-                               <div className="space-y-2">
-                                 <div className="h-20 bg-slate-50 rounded-xl animate-pulse" />
-                                 <div className="h-8 bg-slate-50 rounded-lg animate-pulse" />
-                               </div>
-                             ) : aiAnalysis ? (
-                               <div className="space-y-4">
-                                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                     <p className="text-xs text-slate-600 italic leading-relaxed">"{aiAnalysis.summary}"</p>
-                                  </div>
-                                  <div className={`p-3 rounded-lg border text-center font-black uppercase text-[8px] tracking-widest ${getRiskColor(aiAnalysis.riskLevel)}`}>
-                                     Risk: {aiAnalysis.riskLevel}
-                                  </div>
-                               </div>
-                             ) : null}
                           </div>
 
                           <button 

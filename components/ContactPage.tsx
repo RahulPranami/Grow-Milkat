@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Mail, 
   Phone, 
@@ -26,6 +26,48 @@ interface ContactPageProps {
 }
 
 const ContactPage: React.FC<ContactPageProps> = ({ formatCurrency, t }) => {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    inquiryType: 'General Inquiry',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setStatus(null);
+
+    try {
+      const response = await fetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: formData.inquiryType,
+          category: formData.inquiryType,
+          message: formData.message,
+          userEmail: formData.email,
+          userName: `${formData.firstName} ${formData.lastName}`
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setStatus({ type: 'success', msg: 'Message sent successfully!' });
+        setFormData({ firstName: '', lastName: '', email: '', inquiryType: 'General Inquiry', message: '' });
+      } else {
+        setStatus({ type: 'error', msg: data.message || 'Failed to send message.' });
+      }
+    } catch (err) {
+      setStatus({ type: 'error', msg: 'An error occurred. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="bg-slate-50 min-h-screen">
       {/* 1. Hero Section */}
@@ -92,24 +134,54 @@ const ContactPage: React.FC<ContactPageProps> = ({ formatCurrency, t }) => {
             </div>
           </div>
           <div className="lg:w-1/2 p-8 sm:p-12 lg:p-20">
-            <form className="space-y-4 sm:space-y-6">
+            {status && (
+              <div className={`mb-6 p-4 rounded-xl text-sm font-bold ${status.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                {status.msg}
+              </div>
+            )}
+            <form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
               <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase">First Name</label>
-                  <input type="text" placeholder="John" className="w-full px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:border-emerald-500 transition" />
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    placeholder="John" 
+                    className="w-full px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:border-emerald-500 transition" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase">Last Name</label>
-                  <input type="text" placeholder="Doe" className="w-full px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:border-emerald-500 transition" />
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    placeholder="Doe" 
+                    className="w-full px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:border-emerald-500 transition" 
+                  />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase">Email Address</label>
-                <input type="email" placeholder="john@example.com" className="w-full px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:border-emerald-500 transition" />
+                <input 
+                  type="email" 
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="john@example.com" 
+                  className="w-full px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:border-emerald-500 transition" 
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase">Inquiry Type</label>
-                <select className="w-full px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:border-emerald-500 transition appearance-none">
+                <select 
+                  value={formData.inquiryType}
+                  onChange={(e) => setFormData({ ...formData, inquiryType: e.target.value })}
+                  className="w-full px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:border-emerald-500 transition appearance-none"
+                >
                   <option>General Inquiry</option>
                   <option>Investment Support</option>
                   <option>KYC Verification</option>
@@ -118,11 +190,21 @@ const ContactPage: React.FC<ContactPageProps> = ({ formatCurrency, t }) => {
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase">Message</label>
-                <textarea placeholder="How can we help you?" className="w-full px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:border-emerald-500 transition h-32 resize-none"></textarea>
+                <textarea 
+                  required
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  placeholder="How can we help you?" 
+                  className="w-full px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:border-emerald-500 transition h-32 resize-none"
+                ></textarea>
               </div>
-              <button className="w-full bg-emerald-600 text-white py-4 sm:py-5 rounded-xl sm:rounded-2xl font-bold hover:bg-emerald-700 transition shadow-xl shadow-emerald-200 flex items-center justify-center space-x-2">
-                <span>Send Message</span>
-                <Send className="w-5 h-5" />
+              <button 
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-emerald-600 text-white py-4 sm:py-5 rounded-xl sm:rounded-2xl font-bold hover:bg-emerald-700 transition shadow-xl shadow-emerald-200 flex items-center justify-center space-x-2 disabled:opacity-50"
+              >
+                <span>{isSubmitting ? 'Sending...' : 'Send Message'}</span>
+                {!isSubmitting && <Send className="w-5 h-5" />}
               </button>
             </form>
           </div>

@@ -31,6 +31,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
 import { Testimonial, TestimonialType, BlogPost } from './types';
 
+// Database Services
+import * as dbService from './services/databaseService';
+import * as authService from './services/authService';
+import { supabase } from './src/lib/supabase';
+
 const MOCK_TESTIMONIALS: Testimonial[] = [
   {
     id: '1',
@@ -368,6 +373,7 @@ const App: React.FC = () => {
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null);
   const [selectedTestimonial, setSelectedTestimonial] = useState<Testimonial | null>(null);
   const [selectedBlogPost, setSelectedBlogPost] = useState<BlogPost | null>(null);
+  
   const [blogs, setBlogs] = useState<BlogPost[]>([
     {
       id: '1',
@@ -426,22 +432,71 @@ const App: React.FC = () => {
       tags: ['Diversification', 'Alternative Assets', 'Portfolio Growth']
     }
   ]);
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(MOCK_OPPORTUNITIES);
-  const [partners, setPartners] = useState<Partner[]>([]);
-  const [investors, setInvestors] = useState<Investor[]>(MOCK_INVESTORS);
+
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [investors, setInvestors] = useState<Investor[]>([]);
   const [userInvestments, setUserInvestments] = useState<InvestmentRecord[]>([]);
-  const [paymentHistory, setPaymentHistory] = useState<PaymentRecord[]>([
-    { id: 'TXN-982341', investorId: 'inv1', amount: 5000, date: '2025-03-01', method: 'Bank Transfer', status: 'Completed', type: 'Deposit' },
-    { id: 'TXN-771209', investorId: 'inv1', amount: 2000, date: '2025-03-15', method: 'Card Payment', status: 'Completed', type: 'Deposit' },
-    { id: 'TXN-445122', investorId: 'inv2', amount: 1500, date: '2025-03-20', method: 'UPI Transfer', status: 'Completed', type: 'Deposit' },
-    { id: 'TXN-112098', investorId: 'inv1', amount: 10000, date: '2025-03-22', method: 'Net Banking', status: 'Completed', type: 'Deposit' },
-  ]);
-  const [returns, setReturns] = useState<ReturnRecord[]>([
-    { id: 'RET-001', investorId: 'inv1', investmentId: '1', investmentTitle: 'Azure Coast Luxury Hotel', amount: 0, date: '2025-03-20', type: 'Monthly Rent' },
-    { id: 'RET-002', investorId: 'inv2', investmentId: '3', investmentTitle: 'Downtown Commercial Plaza', amount: 0, date: '2025-03-24', type: 'Dividend' },
-  ]);
+  const [returns, setReturns] = useState<ReturnRecord[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(MOCK_TESTIMONIALS);
+  
+  const [paymentHistory, setPaymentHistory] = useState<PaymentRecord[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = authService.subscribeToAuthChanges(async (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+        const investorData = await dbService.getInvestorByUid(user.id);
+        if (investorData) {
+          setCurrentUser(investorData);
+          setIsAdmin(investorData.role === 'admin');
+          
+          // Fetch user-specific data
+          const userInvs = await dbService.getInvestmentsByInvestor(user.id);
+          setUserInvestments(userInvs);
+          
+          const userWithdrawals = await dbService.getWithdrawalsByInvestor(user.id);
+          setWithdrawals(userWithdrawals);
+          
+          const userReturns = await dbService.getReturnsByInvestor(user.id);
+          setReturns(userReturns);
+        }
+      } else {
+        setIsLoggedIn(false);
+        setIsAdmin(false);
+        setCurrentUser(null);
+      }
+    });
+
+    // Initial data fetch
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const opps = await dbService.getOpportunities();
+        setOpportunities(opps);
+        
+        const invs = await dbService.getInvestors();
+        setInvestors(invs);
+        
+        // If admin, fetch all data
+        if (isAdmin) {
+          const allInvs = await dbService.getAllInvestments();
+          setUserInvestments(allInvs);
+          
+          const allWithdrawals = await dbService.getAllWithdrawals();
+          setWithdrawals(allWithdrawals);
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, [isAdmin]);
+
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     {
       id: '1',
@@ -770,7 +825,7 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleInvest = (opp: Opportunity, amount: number, investorId?: string) => {
+  const handleInvest = async (opp: Opportunity, amount: number, investorId?: string) => {
     if (!isLoggedIn) {
       alert("Please log in to your account to start investing.");
       setCurrentView('login');
@@ -804,8 +859,7 @@ const App: React.FC = () => {
 
     const targetId = investorId || currentUser?.id || 'inv1';
 
-    const newRecord: InvestmentRecord = {
-      id: generateUniqueId(),
+    const newRecord: Omit<InvestmentRecord, "id"> = {
       investorId: targetId,
       opportunityId: opp.id,
       opportunityTitle: opp.title,
@@ -814,20 +868,40 @@ const App: React.FC = () => {
       status: InvestmentStatus.ACTIVE,
       type: opp.type
     };
-    setUserInvestments([newRecord, ...userInvestments]);
-    setOpportunities(prev => prev.map(o => o.id === opp.id ? { ...o, raisedAmount: Math.min(o.targetAmount, o.raisedAmount + finalAmount) } : o));
-    
-    // Update investor's total invested
-    setInvestors(prev => prev.map(inv => inv.id === targetId ? { ...inv, totalInvested: inv.totalInvested + finalAmount, activeAssets: inv.activeAssets + 1 } : inv));
 
-    // Add notification
-    handleAddNotification(
-      targetId,
-      NotificationType.INVESTMENT,
-      'Investment Successful',
-      `Your investment of $${finalAmount.toLocaleString()} in "${opp.title}" has been processed successfully.`,
-      '/dashboard?tab=history'
-    );
+    try {
+      const docRef = await dbService.addInvestment(newRecord);
+      const savedRecord = { id: docRef.id, ...newRecord };
+      
+      setUserInvestments([savedRecord, ...userInvestments]);
+      
+      const updatedOpp = { ...opp, raisedAmount: Math.min(opp.targetAmount, opp.raisedAmount + finalAmount) };
+      await dbService.saveOpportunity(updatedOpp);
+      setOpportunities(prev => prev.map(o => o.id === opp.id ? updatedOpp : o));
+      
+      // Update investor's total invested
+      if (currentUser && currentUser.id === targetId) {
+        const updatedUser = { 
+          ...currentUser, 
+          totalInvested: currentUser.totalInvested + finalAmount, 
+          activeAssets: currentUser.activeAssets + 1 
+        };
+        await dbService.saveInvestor(targetId, updatedUser);
+        setCurrentUser(updatedUser);
+      }
+
+      // Add notification
+      handleAddNotification(
+        targetId,
+        NotificationType.INVESTMENT,
+        'Investment Successful',
+        `Your investment of $${finalAmount.toLocaleString()} in "${opp.title}" has been processed successfully.`,
+        '/dashboard?tab=history'
+      );
+    } catch (err) {
+      console.error("Investment failed:", err);
+      alert("Investment failed. Please try again.");
+    }
   };
 
   const handleSaveOpportunity = (opp: Opportunity) => {
@@ -1030,36 +1104,32 @@ const App: React.FC = () => {
     );
   };
 
-  const handleWithdraw = (withdrawal: WithdrawalRecord) => {
-    setWithdrawals(prev => [withdrawal, ...prev]);
-    
-    // Update return record status if it's a returns withdrawal
-    if (withdrawal.isReturnsWithdrawal && withdrawal.returnId) {
-      setReturns(prev => prev.map(ret => 
-        ret.id === withdrawal.returnId ? { ...ret, withdrawalStatus: WithdrawalStatus.PENDING, withdrawalRequestedAt: withdrawal.date } : ret
-      ));
+  const handleWithdraw = async (withdrawal: WithdrawalRecord) => {
+    const { id, ...data } = withdrawal;
+    try {
+      const docRef = await dbService.addWithdrawal(data);
+      const savedWithdrawal = { id: docRef.id, ...data };
+      setWithdrawals(prev => [savedWithdrawal, ...prev]);
+      
+      // Update return record status if it's a returns withdrawal
+      if (withdrawal.isReturnsWithdrawal && withdrawal.returnId) {
+        setReturns(prev => prev.map(ret => 
+          ret.id === withdrawal.returnId ? { ...ret, withdrawalStatus: WithdrawalStatus.PENDING, withdrawalRequestedAt: withdrawal.date } : ret
+        ));
+      }
+      
+      // Add notification
+      handleAddNotification(
+        withdrawal.investorId,
+        NotificationType.OTHER,
+        'Withdrawal Request Sent',
+        `Your withdrawal request for $${withdrawal.withdrawalAmount.toLocaleString()} has been sent for approval.`,
+        '/dashboard?tab=history'
+      );
+    } catch (err) {
+      console.error("Withdrawal failed:", err);
+      alert("Withdrawal request failed. Please try again.");
     }
-    
-    // Add to payment history as well
-    const newPayment: PaymentRecord = {
-      id: withdrawal.id,
-      investorId: withdrawal.investorId,
-      amount: withdrawal.withdrawalAmount,
-      date: withdrawal.date,
-      method: 'Withdrawal',
-      status: 'Pending',
-      type: 'Withdrawal'
-    };
-    setPaymentHistory(prev => [newPayment, ...prev]);
-
-    // Add notification
-    handleAddNotification(
-      withdrawal.investorId,
-      NotificationType.OTHER,
-      'Withdrawal Request Sent',
-      `Your withdrawal request for $${withdrawal.withdrawalAmount.toLocaleString()} has been sent for approval.`,
-      '/dashboard?tab=history'
-    );
   };
 
   const handleUploadKYC = (investorId: string, documents: string[]) => {
@@ -1195,11 +1265,16 @@ const App: React.FC = () => {
     setTeamMembers(prev => prev.filter(m => m.id !== id));
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setIsAdmin(false);
-    setCurrentUser(null);
-    setCurrentView('home');
+  const handleLogout = async () => {
+    try {
+      await authService.logOut();
+      setIsLoggedIn(false);
+      setIsAdmin(false);
+      setCurrentUser(null);
+      setCurrentView('home');
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
   };
 
   const renderView = () => {

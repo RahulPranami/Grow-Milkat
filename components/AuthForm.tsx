@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, Shield, ArrowRight, CheckCircle2, Smartphone, CreditCard, Landmark, Camera, FileText, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import * as authService from '../services/authService';
 
 interface AuthFormProps {
   type: 'login' | 'register';
@@ -57,15 +58,23 @@ const AuthForm: React.FC<AuthFormProps> = ({ type, onSuccess, t }) => {
     }
   };
 
-  const handleBasicSubmit = (e: React.FormEvent) => {
+  const handleBasicSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (emailError) return;
     if (type === 'register' && passwordStrength < 60) {
       alert('Password is too weak. Please use a stronger password.');
       return;
     }
+    
     if (type === 'login' || role === 'admin') {
-      onSuccess(role === 'admin', { email, fullName });
+      try {
+        const user = await authService.logIn(email, password);
+        // We'll let onAuthStateChange handle the state update in App.tsx, 
+        // but we need to call onSuccess to navigate away
+        onSuccess(role === 'admin', { email, fullName: user.displayName || email });
+      } catch (err: any) {
+        alert(err.message || "Login failed");
+      }
     } else {
       setStep('otp');
     }
@@ -91,11 +100,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ type, onSuccess, t }) => {
     setStep('payment');
   };
 
-  const handlePaymentSubmit = () => {
-    setStep('complete');
-    setTimeout(() => {
-      onSuccess(false, { email, fullName, referredBy });
-    }, 1500);
+  const handlePaymentSubmit = async () => {
+    try {
+      await authService.signUp(email, password, fullName, role as any);
+      setStep('complete');
+      setTimeout(() => {
+        onSuccess(false, { email, fullName, referredBy });
+      }, 1500);
+    } catch (err: any) {
+      alert(err.message || "Registration failed");
+    }
   };
 
   const renderBasicInfo = () => (
