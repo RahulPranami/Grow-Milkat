@@ -1,0 +1,8 @@
+{
+  "name": "Remix: 15 V : Asset Withdrawal Manager",
+  "description": "An investment platform with specialized withdrawal logic: re-submit on rejection, restricted on approval.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

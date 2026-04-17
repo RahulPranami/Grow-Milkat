@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "Asset": {
+      "title": "Asset",
+      "description": "An investment asset available for investors.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "value": { "type": "number" }
+      },
+      "required": ["id", "name", "value"]
+    },
+    "Investment": {
+      "title": "Investment",
+      "description": "A user's investment in a specific asset.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "assetId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "withdrawn"] }
+      },
+      "required": ["userId", "assetId", "amount", "status"]
+    },
+    "Withdrawal": {
+      "title": "Withdrawal",
+      "description": "A withdrawal request for an asset.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "assetId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "assetId", "amount", "status", "createdAt", "updatedAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A user of the platform.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "investor"] },
+        "referralBy": { "type": "string" },
+        "referralCode": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Referral": {
+      "title": "Referral",
+      "description": "A referral code managed by admin.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "count": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "code", "count", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/assets/{assetId}": {
+      "schema": "Asset",
+      "description": "Collection of available assets."
+    },
+    "/investments/{investmentId}": {
+      "schema": "Investment",
+      "description": "Collection of user investments."
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": "Withdrawal",
+      "description": "Collection of withdrawal requests."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles."
+    },
+    "/referrals/{referralId}": {
+      "schema": "Referral",
+      "description": "Collection of referral codes."
+    }
+  }
+}
