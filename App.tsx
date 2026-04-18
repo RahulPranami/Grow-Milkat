@@ -376,7 +376,7 @@ const App: React.FC = () => {
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null);
   const [selectedTestimonial, setSelectedTestimonial] = useState<Testimonial | null>(null);
   const [selectedBlogPost, setSelectedBlogPost] = useState<BlogPost | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Initialize currentView based on URL
   useEffect(() => {
@@ -804,15 +804,6 @@ const App: React.FC = () => {
   };
 
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Simulate initial data loading
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
