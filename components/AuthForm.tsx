@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Mail, Lock, User, Shield, ArrowRight, CheckCircle2, Smartphone, CreditCard, Landmark, Camera, FileText, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as authService from '../services/authService';
+import { getInvestorByUid } from '../services/databaseService';
 
 interface AuthFormProps {
   type: 'login' | 'register';
@@ -67,16 +68,19 @@ const AuthForm: React.FC<AuthFormProps> = ({ type, onSuccess, onToggleType, t })
       return;
     }
     
-    if (type === 'login' || role === 'admin') {
+    if (type === 'login') {
       try {
         const user = await authService.logIn(email, password);
-        // We'll let onAuthStateChange handle the state update in App.tsx, 
-        // but we need to call onSuccess to navigate away
-        onSuccess(role === 'admin', { email, fullName: user.displayName || email });
+        // Check if user is actually an admin if they selected the admin role
+        const investorData = await getInvestorByUid(user.id);
+        const isActuallyAdmin = investorData?.role === 'admin';
+        
+        onSuccess(isActuallyAdmin, { email, fullName: user.user_metadata?.full_name || email });
       } catch (err: any) {
         alert(err.message || "Login failed");
       }
     } else {
+      // It's registration, always proceed to OTP step regardless of role
       setStep('otp');
     }
   };
