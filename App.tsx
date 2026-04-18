@@ -1330,16 +1330,20 @@ const App: React.FC = () => {
         return <BlogDetailPage post={selectedBlogPost} onBack={() => handleNavigate('blog')} onNavigate={handleNavigate} t={t} />;
       }
       case 'startup-investment': return <StartupInvestmentPage onNavigate={handleNavigate} />;
-      case 'security-trust': return <SecurityTrustPage />;
-      case 'how-it-works': return <HowItWorksPage />;
-      case 'login': 
-      case 'register': 
-        return <AuthForm type={currentView} onSuccess={(admin) => {
-          setIsLoggedIn(true);
-          setIsAdmin(admin);
-          setCurrentUser(admin ? null : investors[0]); // Default to first investor for demo
-          setCurrentView(admin ? 'admin' : 'dashboard');
-        }} t={t} />;
+      case 'security-trust': return <SecurityTrustPage onNavigate={handleNavigate} />;
+      case 'how-it-works': return <HowItWorksPage onNavigate={handleNavigate} />;
+      case 'login':
+      case 'register':
+        return <AuthForm 
+          type={currentView} 
+          onToggleType={() => setCurrentView(currentView === 'login' ? 'register' : 'login')}
+          onSuccess={(admin) => {
+            setIsLoggedIn(true);
+            setIsAdmin(admin);
+            setCurrentUser(admin ? null : (investors.length > 0 ? investors[0] : null));
+            setCurrentView(admin ? 'admin' : 'dashboard');
+          }} t={t} />;
+
       case 'dashboard': 
         return <UserDashboard 
           opportunities={opportunities} 

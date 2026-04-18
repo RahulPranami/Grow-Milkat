@@ -16,7 +16,13 @@ import {
   History
 } from 'lucide-react';
 
-const SecurityTrustPage: React.FC = () => {
+import { View } from '../types';
+
+interface SecurityTrustPageProps {
+  onNavigate: (view: View) => void;
+}
+
+const SecurityTrustPage: React.FC<SecurityTrustPageProps> = ({ onNavigate }) => {
   const securityFeatures = [
     {
       icon: <Lock className="w-8 h-8 text-emerald-500" />,
@@ -239,10 +245,16 @@ const SecurityTrustPage: React.FC = () => {
           <h2 className="text-3xl font-bold text-slate-900 mb-6 serif">Ready to invest with confidence?</h2>
           <p className="text-slate-500 mb-10 font-medium">Join thousands of investors who trust Grow Milkat for their alternative asset portfolio.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-emerald-600 transition shadow-xl shadow-slate-200">
+            <button 
+              onClick={() => onNavigate('register')}
+              className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-emerald-600 transition shadow-xl shadow-slate-200"
+            >
               Get Started Now
             </button>
-            <button className="px-10 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-50 transition">
+            <button 
+              onClick={() => onNavigate('portfolio')}
+              className="px-10 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-50 transition"
+            >
               View Opportunities
             </button>
           </div>

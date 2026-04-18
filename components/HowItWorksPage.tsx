@@ -15,7 +15,13 @@ import {
   Lock
 } from 'lucide-react';
 
-const HowItWorksPage: React.FC = () => {
+import { View } from '../types';
+
+interface HowItWorksPageProps {
+  onNavigate: (view: View) => void;
+}
+
+const HowItWorksPage: React.FC<HowItWorksPageProps> = ({ onNavigate }) => {
   const steps = [
     {
       icon: <UserPlus className="w-8 h-8 text-emerald-600" />,
@@ -219,10 +225,16 @@ const HowItWorksPage: React.FC = () => {
           <h2 className="text-3xl font-bold text-white mb-6">Ready to Start Building Wealth?</h2>
           <p className="text-emerald-100 mb-10 max-w-2xl mx-auto">Join thousands of investors who are already growing their passive income through Growmilkat.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-emerald-600 px-8 py-4 rounded-xl font-bold hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2">
+            <button 
+              onClick={() => onNavigate('register')}
+              className="bg-white text-emerald-600 px-8 py-4 rounded-xl font-bold hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2"
+            >
               Get Started Now <ArrowRight className="w-5 h-5" />
             </button>
-            <button className="bg-emerald-700 text-white px-8 py-4 rounded-xl font-bold hover:bg-emerald-800 transition-colors">
+            <button 
+              onClick={() => onNavigate('contact')}
+              className="bg-emerald-700 text-white px-8 py-4 rounded-xl font-bold hover:bg-emerald-800 transition-colors"
+            >
               Speak with Advisor
             </button>
           </div>

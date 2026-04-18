@@ -7,12 +7,13 @@ import * as authService from '../services/authService';
 interface AuthFormProps {
   type: 'login' | 'register';
   onSuccess: (isAdmin: boolean, userData?: { email: string; fullName?: string; referredBy?: string }) => void;
+  onToggleType?: () => void;
   t: (key: string) => string;
 }
 
 type OnboardingStep = 'basic' | 'otp' | 'kyc' | 'payment' | 'complete';
 
-const AuthForm: React.FC<AuthFormProps> = ({ type, onSuccess, t }) => {
+const AuthForm: React.FC<AuthFormProps> = ({ type, onSuccess, onToggleType, t }) => {
   const [step, setStep] = useState<OnboardingStep>('basic');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -477,7 +478,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ type, onSuccess, t }) => {
           <div className="text-center mt-6">
             <p className="text-sm text-slate-500">
               {type === 'login' ? "Don't have an account?" : "Already have an account?"}
-              <button type="button" className="ml-1 font-bold text-primary hover:text-primary/80">
+              <button 
+                type="button" 
+                onClick={onToggleType}
+                className="ml-1 font-bold text-primary hover:text-primary/80"
+              >
                 {type === 'login' ? 'Sign up' : 'Log in'}
               </button>
             </p>
