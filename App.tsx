@@ -388,10 +388,17 @@ const App: React.FC = () => {
   }, [location.pathname]);
   
   useEffect(() => {
+    // Check for Supabase configuration
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      console.error("CRITICAL ERROR: Supabase environment variables are missing.");
+      alert("System Configuration Error: Supabase URL or API Key is missing. If you are on Vercel, please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Environment Variables.");
+    }
+
     // IP-based currency detection
     const detectCurrency = async () => {
       try {
         const response = await fetch('https://ipapi.co/json/');
+        if (!response.ok) throw new Error("IP API failed");
         const data = await response.json();
         if (data.country_code === 'IN') {
           setSelectedCurrency('INR');
@@ -399,7 +406,8 @@ const App: React.FC = () => {
           setSelectedCurrency('USD');
         }
       } catch (err) {
-        console.error("Currency detection failed:", err);
+        console.warn("Currency detection failed, defaulting to USD:", err);
+        setSelectedCurrency('USD');
       }
     };
     detectCurrency();
