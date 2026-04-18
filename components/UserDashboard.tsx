@@ -43,6 +43,7 @@ interface UserDashboardProps {
   withdrawals: WithdrawalRecord[];
   onWithdraw: (withdrawal: WithdrawalRecord) => void;
   onInvest: (opp: Opportunity, amount: number) => void;
+  onDeposit: (amount: number, method: string) => void;
   investmentGoal: InvestmentGoal;
   onUpdateGoal: (goal: InvestmentGoal) => void;
   currentUser: Investor | null;
@@ -71,6 +72,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
   withdrawals,
   onWithdraw,
   onInvest,
+  onDeposit,
   investmentGoal,
   onUpdateGoal,
   currentUser,

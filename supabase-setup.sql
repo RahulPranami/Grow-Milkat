@@ -53,9 +53,44 @@ CREATE TABLE users (
   "preferences" JSONB,
   "hasAcceptedLegal" BOOLEAN DEFAULT false,
   "role" TEXT DEFAULT 'investor',
+  "walletBalance" NUMERIC DEFAULT 0,
+  "referralCode" TEXT UNIQUE,
+  "referredBy" TEXT,
   "kycMessages" JSONB DEFAULT '[]',
   "notifications" JSONB DEFAULT '[]'
 );
+
+-- Referrals Table
+CREATE TABLE referrals (
+  "id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  "referrerId" UUID REFERENCES users("id") ON DELETE CASCADE,
+  "referredId" UUID REFERENCES users("id") ON DELETE CASCADE,
+  "status" TEXT DEFAULT 'Pending', -- 'Pending', 'Active' (after first investment)
+  "rewardAmount" NUMERIC DEFAULT 0,
+  "date" TIMESTAMPTZ DEFAULT now(),
+  "createdAt" TIMESTAMPTZ DEFAULT now()
+);
+
+-- Enable RLS for referrals
+ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view their own referrals" ON referrals FOR SELECT USING (auth.uid() = "referrerId");
+
+-- Wallet Transactions
+CREATE TABLE wallet_transactions (
+  "id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  "investorId" UUID REFERENCES users("id") ON DELETE CASCADE,
+  "amount" NUMERIC NOT NULL,
+  "type" TEXT NOT NULL, -- 'Deposit', 'Investment', 'Withdrawal', 'Return', 'Referral'
+  "status" TEXT DEFAULT 'Completed',
+  "description" TEXT,
+  "fee" NUMERIC DEFAULT 0,
+  "date" TIMESTAMPTZ DEFAULT now(),
+  "createdAt" TIMESTAMPTZ DEFAULT now()
+);
+
+-- Enable RLS for wallet_transactions
+ALTER TABLE wallet_transactions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view their own wallet transactions" ON wallet_transactions FOR SELECT USING (auth.uid() = "investorId");
 
 -- Investments
 CREATE TABLE investments (

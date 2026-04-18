@@ -126,3 +126,75 @@ export const deletePartner = async (id: string) => {
   const { error } = await supabase.from('partners').delete().eq('id', id);
   if (error) throw error;
 };
+
+// --- Wallet ---
+export const getWalletTransactions = async (investorId: string) => {
+  const { data, error } = await supabase
+    .from('wallet_transactions')
+    .select('*')
+    .eq('investorId', investorId)
+    .order('date', { ascending: false });
+  if (error) throw error;
+  return data;
+};
+
+export const addWalletTransaction = async (transaction: {
+  investorId: string;
+  amount: number;
+  type: string;
+  description: string;
+  fee?: number;
+  status?: string;
+}) => {
+  const { data, error } = await supabase
+    .from('wallet_transactions')
+    .insert([transaction])
+    .select()
+    .single();
+  if (error) throw error;
+
+  // Update user balance
+  const { data: user } = await supabase
+    .from('users')
+    .select('walletBalance')
+    .eq('id', transaction.investorId)
+    .single();
+  
+  if (user) {
+    const newBalance = transaction.type === 'Deposit' || transaction.type === 'Return' || transaction.type === 'Referral'
+      ? (Number(user.walletBalance) || 0) + transaction.amount
+      : (Number(user.walletBalance) || 0) - transaction.amount - (transaction.fee || 0);
+
+    await supabase
+      .from('users')
+      .update({ walletBalance: newBalance })
+      .eq('id', transaction.investorId);
+  }
+
+  return data;
+};
+
+// --- Referrals ---
+export const getReferrals = async (referrerId: string) => {
+  const { data, error } = await supabase
+    .from('referrals')
+    .select(`
+      *,
+      referred:referredId(name, email, avatar)
+    `)
+    .eq('referrerId', referrerId);
+  if (error) throw error;
+  return data;
+};
+
+export const getAllReferrals = async () => {
+  const { data, error } = await supabase
+    .from('referrals')
+    .select(`
+      *,
+      referrer:referrerId(name, email),
+      referred:referredId(name, email)
+    `);
+  if (error) throw error;
+  return data;
+};

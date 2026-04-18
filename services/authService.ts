@@ -3,7 +3,7 @@ import { supabase } from "../src/lib/supabase";
 import { getInvestorByUid, saveInvestor } from "./databaseService";
 import { Investor } from "../types";
 
-export const signUp = async (email: string, pass: string, fullName: string, role: 'admin' | 'investor' = 'investor') => {
+export const signUp = async (email: string, pass: string, fullName: string, role: 'admin' | 'investor' = 'investor', referredByCode?: string) => {
   const { data, error } = await supabase.auth.signUp({
     email,
     password: pass,
@@ -18,6 +18,21 @@ export const signUp = async (email: string, pass: string, fullName: string, role
   if (error) throw error;
   if (!data.user) throw new Error("User creation failed");
 
+  const referralCode = fullName.split(' ')[0].toUpperCase() + Math.floor(1000 + Math.random() * 9000);
+
+  // Link to referrer if code provided
+  let referredByUserId = null;
+  if (referredByCode) {
+    const { data: referrer } = await supabase
+      .from('users')
+      .select('id')
+      .eq('referralCode', referredByCode)
+      .single();
+    if (referrer) {
+      referredByUserId = referrer.id;
+    }
+  }
+
   const investorData: Partial<Investor> = {
     name: fullName,
     email: email,
@@ -25,11 +40,24 @@ export const signUp = async (email: string, pass: string, fullName: string, role
     totalInvested: 0,
     activeAssets: 0,
     totalReturns: 0,
+    walletBalance: 0,
+    referralCode: referralCode,
+    referredBy: referredByCode,
     joinedDate: new Date().toISOString().split('T')[0],
     role: role
   };
 
   await saveInvestor(data.user.id, investorData);
+
+  // Create referral record
+  if (referredByUserId) {
+    await supabase.from('referrals').insert({
+      referrerId: referredByUserId,
+      referredId: data.user.id,
+      status: 'Pending'
+    });
+  }
+
   return data.user;
 };
 

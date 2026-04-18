@@ -4,6 +4,7 @@ import { Mail, Lock, User, Shield, ArrowRight, CheckCircle2, Smartphone, CreditC
 import { motion, AnimatePresence } from 'framer-motion';
 import * as authService from '../services/authService';
 import { getInvestorByUid } from '../services/databaseService';
+import * as emailService from '../services/emailService';
 
 interface AuthFormProps {
   type: 'login' | 'register';
@@ -82,6 +83,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ type, onSuccess, onToggleType, t })
     } else {
       // It's registration, always proceed to OTP step regardless of role
       setStep('otp');
+      // Email Trigger
+      emailService.sendEmail('OTP', {
+        userEmail: email,
+        otp: Math.floor(100000 + Math.random() * 900000).toString()
+      });
     }
   };
 
@@ -107,7 +113,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type, onSuccess, onToggleType, t })
 
   const handlePaymentSubmit = async () => {
     try {
-      const user = await authService.signUp(email, password, fullName, role as any);
+      const user = await authService.signUp(email, password, fullName, role as any, referredBy);
       setStep('complete');
       setTimeout(() => {
         onSuccess(role === 'admin', { email, fullName, referredBy });

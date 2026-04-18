@@ -63,6 +63,7 @@ interface AdminPanelProps {
   blogs: BlogPost[];
   onSaveBlog: (blog: BlogPost) => void;
   onDeleteBlog: (id: string) => void;
+  referrals: any[];
   formatCurrency: (amount: number) => string;
   t: (key: string) => string;
   config: any;
@@ -82,7 +83,7 @@ const KPI_ACTIVE_INVESTORS = [];
 
 const CHART_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-type AdminTab = 'overview' | 'manage' | 'investors' | 'transactions' | 'kyc' | 'reports' | 'settings' | 'notifications' | 'withdrawals' | 'investments' | 'asset-manager' | 'testimonials' | 'partners' | 'team-manager' | 'faq-management' | 'blog-manager' | 'certificates';
+type AdminTab = 'overview' | 'manage' | 'investors' | 'transactions' | 'kyc' | 'reports' | 'settings' | 'notifications' | 'withdrawals' | 'investments' | 'asset-manager' | 'testimonials' | 'partners' | 'team-manager' | 'faq-management' | 'blog-manager' | 'certificates' | 'referrals';
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ 
   opportunities, 
@@ -123,6 +124,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   blogs,
   onSaveBlog,
   onDeleteBlog,
+  referrals,
   formatCurrency,
   t,
   config,
@@ -3130,6 +3132,76 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             )}
 
             {/* 4. TRANSACTION LEDGER */}
+            {/* Referrals Management */}
+            {activeTab === 'referrals' && (
+              <div className="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden animate-in slide-in-from-right duration-500">
+                <div className="p-10 bg-slate-50/30 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-xl font-bold serif">Referral Management</h3>
+                    <p className="text-xs text-slate-400">Track and manage the global referral network</p>
+                  </div>
+                </div>
+
+                <div className="p-10">
+                  <div className="grid md:grid-cols-3 gap-6 mb-10">
+                    <div className="bg-emerald-50 p-8 rounded-[2rem] border border-emerald-100">
+                      <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-2">Total Referrals</p>
+                      <h4 className="text-4xl font-black text-emerald-900">{referrals.length}</h4>
+                    </div>
+                    <div className="bg-blue-50 p-8 rounded-[2rem] border border-blue-100">
+                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-2">Active Referrals</p>
+                      <h4 className="text-4xl font-black text-blue-900">{referrals.filter(r => r.status === 'Active').length}</h4>
+                    </div>
+                    <div className="bg-amber-50 p-8 rounded-[2rem] border border-amber-100">
+                      <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mb-2">Total Rewards Paid</p>
+                      <h4 className="text-4xl font-black text-amber-900">{formatCurrency(referrals.reduce((sum, r) => sum + (r.rewardAmount || 0), 0))}</h4>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100">
+                          <th className="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Referrer</th>
+                          <th className="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Referred User</th>
+                          <th className="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Date</th>
+                          <th className="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Status</th>
+                          <th className="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Reward</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {referrals.map((ref) => (
+                          <tr key={ref.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                            <td className="py-6 px-4">
+                              <div className="font-bold text-slate-900">{ref.referrer?.name}</div>
+                              <div className="text-[10px] text-slate-400">{ref.referrer?.email}</div>
+                            </td>
+                            <td className="py-6 px-4">
+                              <div className="font-bold text-slate-900">{ref.referred?.name}</div>
+                              <div className="text-[10px] text-slate-400">{ref.referred?.email}</div>
+                            </td>
+                            <td className="py-6 px-4 text-xs font-medium text-slate-600">
+                              {new Date(ref.date).toLocaleDateString()}
+                            </td>
+                            <td className="py-6 px-4">
+                              <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                ref.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                              }`}>
+                                {ref.status}
+                              </span>
+                            </td>
+                            <td className="py-6 px-4 font-black text-slate-900">
+                              {formatCurrency(ref.rewardAmount || 0)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'transactions' && (
               <div className="space-y-6 animate-in slide-in-from-right duration-500">
                 <div className="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden">

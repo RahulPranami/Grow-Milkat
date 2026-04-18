@@ -35,6 +35,7 @@ import { Testimonial, TestimonialType, BlogPost } from './types';
 // Database Services
 import * as dbService from './services/databaseService';
 import * as authService from './services/authService';
+import * as emailService from './services/emailService';
 import { supabase } from './src/lib/supabase';
 
 const MOCK_TESTIMONIALS: Testimonial[] = [
@@ -386,6 +387,24 @@ const App: React.FC = () => {
     }
   }, [location.pathname]);
   
+  useEffect(() => {
+    // IP-based currency detection
+    const detectCurrency = async () => {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        if (data.country_code === 'IN') {
+          setSelectedCurrency('INR');
+        } else {
+          setSelectedCurrency('USD');
+        }
+      } catch (err) {
+        console.error("Currency detection failed:", err);
+      }
+    };
+    detectCurrency();
+  }, []);
+
   const [blogs, setBlogs] = useState<BlogPost[]>([
     {
       id: '1',
@@ -844,14 +863,24 @@ const App: React.FC = () => {
   const handleInvest = async (opp: Opportunity, amount: number, investorId?: string) => {
     if (!isLoggedIn) {
       alert("Please log in to your account to start investing.");
-      setCurrentView('login');
+      navigate('/login');
       return;
     }
 
     if (currentUser && currentUser.kycStatus !== 'Verified') {
       alert("Your KYC verification is required before you can invest. Redirecting to verification page...");
       setDashboardTab('kyc');
-      setCurrentView('dashboard');
+      navigate('/dashboard');
+      return;
+    }
+
+    const platformFee = (amount * config.globalCommission) / 100;
+    const totalDeduction = amount + platformFee;
+
+    if (currentUser && currentUser.walletBalance < totalDeduction) {
+      alert(`Insufficient wallet balance. Total required (including ${config.globalCommission}% fee): ${formatCurrency(totalDeduction)}. Please deposit funds first.`);
+      setDashboardTab('payments');
+      navigate('/dashboard');
       return;
     }
 
@@ -875,35 +904,57 @@ const App: React.FC = () => {
 
     const targetId = investorId || currentUser?.id || 'inv1';
 
-    const newRecord: Omit<InvestmentRecord, "id"> = {
-      investorId: targetId,
-      opportunityId: opp.id,
-      opportunityTitle: opp.title,
-      amount: finalAmount,
-      date: new Date().toISOString().split('T')[0],
-      status: InvestmentStatus.ACTIVE,
-      type: opp.type
-    };
-
     try {
+      // 1. Create Investment Record
+      const newRecord: Omit<InvestmentRecord, "id"> = {
+        investorId: targetId,
+        opportunityId: opp.id,
+        opportunityTitle: opp.title,
+        amount: finalAmount,
+        date: new Date().toISOString().split('T')[0],
+        status: InvestmentStatus.ACTIVE,
+        type: opp.type
+      };
+
       const docRef = await dbService.addInvestment(newRecord);
       const savedRecord = { id: docRef.id, ...newRecord };
       
       setUserInvestments([savedRecord, ...userInvestments]);
       
+      // 2. Update Asset Raised Amount
       const updatedOpp = { ...opp, raisedAmount: Math.min(opp.targetAmount, opp.raisedAmount + finalAmount) };
       await dbService.saveOpportunity(updatedOpp);
       setOpportunities(prev => prev.map(o => o.id === opp.id ? updatedOpp : o));
       
-      // Update investor's total invested
+      // 3. Wallet Transaction (Investment)
+      await dbService.addWalletTransaction({
+        investorId: targetId,
+        amount: finalAmount,
+        fee: platformFee,
+        type: 'Investment',
+        description: `Investment in ${opp.title}`,
+        status: 'Completed'
+      });
+
+      // 4. Update local user state
       if (currentUser && currentUser.id === targetId) {
         const updatedUser = { 
           ...currentUser, 
+          walletBalance: currentUser.walletBalance - totalDeduction,
           totalInvested: currentUser.totalInvested + finalAmount, 
           activeAssets: currentUser.activeAssets + 1 
         };
-        await dbService.saveInvestor(targetId, updatedUser);
         setCurrentUser(updatedUser);
+        setInvestors(prev => prev.map(inv => inv.id === targetId ? updatedUser : inv));
+      }
+
+      // Email Trigger
+      if (currentUser) {
+        emailService.sendEmail('INVESTMENT_CERTIFICATE', {
+          userEmail: currentUser.email,
+          opportunityTitle: opp.title,
+          amount: formatCurrency(finalAmount)
+        });
       }
 
       // Add notification
@@ -911,12 +962,45 @@ const App: React.FC = () => {
         targetId,
         NotificationType.INVESTMENT,
         'Investment Successful',
-        `Your investment of $${finalAmount.toLocaleString()} in "${opp.title}" has been processed successfully.`,
+        `Your investment of ${formatCurrency(finalAmount)} in "${opp.title}" has been processed. A platform fee of ${formatCurrency(platformFee)} was applied.`,
         '/dashboard?tab=history'
       );
     } catch (err) {
       console.error("Investment failed:", err);
       alert("Investment failed. Please try again.");
+    }
+  };
+
+  const handleDeposit = async (amount: number, method: string) => {
+    if (!currentUser) return;
+
+    try {
+      await dbService.addWalletTransaction({
+        investorId: currentUser.id,
+        amount: amount,
+        type: 'Deposit',
+        description: `Deposit via ${method}`,
+        status: 'Completed'
+      });
+
+      const updatedUser = {
+        ...currentUser,
+        walletBalance: (currentUser.walletBalance || 0) + amount
+      };
+      
+      setCurrentUser(updatedUser);
+      setInvestors(prev => prev.map(inv => inv.id === currentUser.id ? updatedUser : inv));
+
+      handleAddNotification(
+        currentUser.id,
+        NotificationType.OTHER,
+        'Deposit Successful',
+        `Your deposit of ${formatCurrency(amount)} via ${method} has been credited to your wallet.`,
+        '/dashboard?tab=payments'
+      );
+    } catch (err) {
+      console.error("Deposit failed:", err);
+      alert("Deposit failed. Please try again.");
     }
   };
 
@@ -1108,6 +1192,15 @@ const App: React.FC = () => {
       }
     }
 
+    // Email Trigger
+    if (targetInvestor) {
+      emailService.sendEmail('KYC', {
+        userEmail: targetInvestor.email,
+        status: type === 'Approval' ? 'Approved' : type === 'Rejection' ? 'Rejected' : 'Pending',
+        reason: type === 'Rejection' ? content : undefined
+      });
+    }
+
     // Add notification
     handleAddNotification(
       investorId,
@@ -1240,6 +1333,16 @@ const App: React.FC = () => {
         `Your withdrawal request ${withdrawal.id} has been ${status.toLowerCase()}.`,
         '/dashboard?tab=history'
       );
+
+      // Email Trigger
+      const targetInv = investors.find(i => i.id === withdrawal.investorId);
+      if (targetInv) {
+        emailService.sendEmail('WITHDRAWAL', {
+          userEmail: targetInv.email,
+          status: status,
+          amount: formatCurrency(withdrawal.withdrawalAmount)
+        });
+      }
     }
   };
 
@@ -1410,6 +1513,7 @@ const App: React.FC = () => {
               withdrawals={withdrawals}
               onWithdraw={handleWithdraw}
               onInvest={handleInvest}
+              onDeposit={handleDeposit}
               investmentGoal={investmentGoal}
               onUpdateGoal={setInvestmentGoal}
               currentUser={currentUser}
