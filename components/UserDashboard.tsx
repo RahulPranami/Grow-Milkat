@@ -62,6 +62,7 @@ interface UserDashboardProps {
   selectedCurrency: string;
   onCurrencyChange: (curr: string) => void;
   config: any;
+  loading?: boolean;
 }
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ 
@@ -90,7 +91,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
   onLanguageChange,
   selectedCurrency,
   onCurrencyChange,
-  config
+  config,
+  loading = false
 }) => {
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
@@ -2629,8 +2631,26 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
               )}
 
               {activeTab === 'dashboard' && (
-            <div className="space-y-8 sm:space-y-10 animate-in fade-in duration-500">
-              {/* Header */}
+                <div className="space-y-8 sm:space-y-10 animate-in fade-in duration-500">
+                  {loading ? (
+                    <div className="space-y-10">
+                       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                         <div className="space-y-2">
+                           <Skeleton className="h-10 w-64 rounded-xl" />
+                           <Skeleton className="h-4 w-48 rounded-lg" />
+                         </div>
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                         {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-[2rem]" />)}
+                       </div>
+                       <div className="grid lg:grid-cols-3 gap-8">
+                         <Skeleton className="lg:col-span-2 h-[450px] rounded-[3rem]" />
+                         <Skeleton className="h-[450px] rounded-[3rem]" />
+                       </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Header */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                   <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 serif">Investor Dashboard</h1>
@@ -3282,8 +3302,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
                        </div>
                      )}
                   </div>
-                </div>
-              </div>
+                </>
+              )}
             </div>
           )}
 

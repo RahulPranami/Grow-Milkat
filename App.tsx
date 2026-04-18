@@ -1547,6 +1547,7 @@ const App: React.FC = () => {
               selectedCurrency={selectedCurrency}
               onCurrencyChange={setSelectedCurrency}
               config={config}
+              loading={isLoading}
             /> :
             <Navigate to="/login" replace />
           } />
