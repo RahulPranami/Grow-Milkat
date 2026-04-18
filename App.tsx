@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { View, DashboardTab, Opportunity, InvestmentType, ReturnType, RiskLevel, InvestmentRecord, InvestmentStatus, InvestmentGoal, Investor, PaymentRecord, ReturnRecord, KycMessage, Notification, NotificationType, WithdrawalRecord, Partner, TeamMember, FAQ, FAQCategory, WithdrawalStatus } from './types';
 import { t as translate, Language } from './translations';
 import Navbar from './components/Navbar';
@@ -365,6 +366,8 @@ const MOCK_INVESTORS: Investor[] = [
 ];
 
 const App: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentView, setCurrentView] = useState<View>('home');
   const [dashboardTab, setDashboardTab] = useState<DashboardTab>('dashboard');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -373,6 +376,15 @@ const App: React.FC = () => {
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null);
   const [selectedTestimonial, setSelectedTestimonial] = useState<Testimonial | null>(null);
   const [selectedBlogPost, setSelectedBlogPost] = useState<BlogPost | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Initialize currentView based on URL
+  useEffect(() => {
+    const path = location.pathname.substring(1) as View;
+    if (path) {
+      setCurrentView(path);
+    }
+  }, [location.pathname]);
   
   const [blogs, setBlogs] = useState<BlogPost[]>([
     {
@@ -434,6 +446,7 @@ const App: React.FC = () => {
   ]);
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [userInvestments, setUserInvestments] = useState<InvestmentRecord[]>([]);
   const [returns, setReturns] = useState<ReturnRecord[]>([]);
@@ -477,6 +490,9 @@ const App: React.FC = () => {
         
         const invs = await dbService.getInvestors();
         setInvestors(invs);
+
+        const pts = await dbService.getPartners();
+        setPartners(pts);
         
         // If admin, fetch all data
         if (isAdmin) {
@@ -810,20 +826,22 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleNavigate = (view: View, data?: any) => {
+  const handleNavigate = useCallback((view: View, data?: any) => {
     setCurrentView(view);
-    if (view === 'opportunity-detail' && typeof data === 'string') {
+    if (view === 'opportunity-detail' && data) {
       setSelectedOpportunityId(data);
-    }
-    if (view === 'testimonial-detail' && data) {
+      navigate(`/opportunity-detail?id=${data}`);
+    } else if (view === 'testimonial-detail' && data) {
       setSelectedTestimonial(data);
-    }
-    if (view === 'blog-detail' && data) {
+      navigate('/testimonial-detail');
+    } else if (view === 'blog-detail' && data) {
       setSelectedBlogPost(data);
+      navigate('/blog-detail');
+    } else {
+      navigate(`/${view === 'home' ? '' : view}`);
     }
-    // Scroll to top when changing views
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, [navigate]);
+
 
   const handleInvest = async (opp: Opportunity, amount: number, investorId?: string) => {
     if (!isLoggedIn) {
@@ -1277,152 +1295,6 @@ const App: React.FC = () => {
     }
   };
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'home': return <LandingPage onNavigate={handleNavigate} formatCurrency={formatCurrency} t={t} testimonials={testimonials} loading={isLoading} />;
-      case 'about': return <AboutPage formatCurrency={formatCurrency} t={t} onNavigate={handleNavigate} testimonials={testimonials} />;
-      case 'why': return <WhyChooseUs formatCurrency={formatCurrency} t={t} />;
-      case 'portfolio': return (
-        <PortfolioPage 
-          opportunities={opportunities} 
-          onInvest={handleInvest} 
-          isAdmin={isAdmin}
-          isLoggedIn={isLoggedIn}
-          currentUser={currentUser}
-          onDelete={handleDeleteOpportunity}
-          onEdit={handleSaveOpportunity}
-          onViewDetail={(id) => handleNavigate('opportunity-detail', id)}
-          formatCurrency={formatCurrency}
-          selectedCurrency={selectedCurrency}
-          t={t}
-        />
-      );
-      case 'opportunity-detail': {
-        const opp = opportunities.find(o => o.id === selectedOpportunityId);
-        if (!opp) return <LandingPage onNavigate={setCurrentView} formatCurrency={formatCurrency} t={t} testimonials={testimonials} loading={isLoading} />;
-        return (
-          <OpportunityDetailPage 
-            opportunity={opp} 
-            onBack={() => setCurrentView('portfolio')} 
-            onInvest={handleInvest} 
-            isLoggedIn={isLoggedIn}
-            currentUser={currentUser}
-            formatCurrency={formatCurrency}
-            selectedCurrency={selectedCurrency}
-            t={t}
-          />
-        );
-      }
-      case 'contact': return <ContactPage formatCurrency={formatCurrency} t={t} />;
-      case 'our-team': return <OurTeamPage t={t} teamMembers={teamMembers} />;
-      case 'our-partners': return <OurPartnersPage partners={partners} />;
-      case 'privacy-policy': return <PrivacyPolicyPage config={config} />;
-      case 'terms-conditions': return <TermsConditionsPage config={config} />;
-      case 'faq': return <FAQPage faqs={faqs} categories={faqCategories} />;
-      case 'testimonials': return <TestimonialsPage language={language} onNavigate={handleNavigate} testimonials={testimonials} />;
-      case 'testimonial-detail': {
-        if (!selectedTestimonial) return <TestimonialsPage language={language} onNavigate={handleNavigate} testimonials={testimonials} />;
-        return <TestimonialDetailPage testimonial={selectedTestimonial} onBack={() => handleNavigate('testimonials')} language={language} />;
-      }
-      case 'blog': return <BlogPage onNavigate={handleNavigate} t={t} blogs={blogs} />;
-      case 'blog-detail': {
-        if (!selectedBlogPost) return <BlogPage onNavigate={handleNavigate} t={t} blogs={blogs} />;
-        return <BlogDetailPage post={selectedBlogPost} onBack={() => handleNavigate('blog')} onNavigate={handleNavigate} t={t} />;
-      }
-      case 'startup-investment': return <StartupInvestmentPage onNavigate={handleNavigate} />;
-      case 'security-trust': return <SecurityTrustPage onNavigate={handleNavigate} />;
-      case 'how-it-works': return <HowItWorksPage onNavigate={handleNavigate} />;
-      case 'login':
-      case 'register':
-        return <AuthForm 
-          type={currentView} 
-          onToggleType={() => setCurrentView(currentView === 'login' ? 'register' : 'login')}
-          onSuccess={(admin) => {
-            setIsLoggedIn(true);
-            setIsAdmin(admin);
-            setCurrentUser(admin ? null : (investors.length > 0 ? investors[0] : null));
-            setCurrentView(admin ? 'admin' : 'dashboard');
-          }} t={t} />;
-
-      case 'dashboard': 
-        return <UserDashboard 
-          opportunities={opportunities} 
-          userInvestments={userInvestments} 
-          paymentHistory={paymentHistory}
-          returns={returns}
-          withdrawals={withdrawals}
-          onWithdraw={handleWithdraw}
-          onInvest={handleInvest}
-          investmentGoal={investmentGoal}
-          onUpdateGoal={setInvestmentGoal}
-          currentUser={currentUser}
-          onUpdateProfile={handleUpdateProfile}
-          onUploadKYC={handleUploadKYC}
-          onLogout={handleLogout}
-          activeTab={dashboardTab}
-          onTabChange={setDashboardTab}
-          onMarkNotificationRead={handleMarkNotificationRead}
-          onNavigate={handleNavigate}
-          partners={partners}
-          formatCurrency={formatCurrency}
-          t={t}
-          language={language}
-          onLanguageChange={setLanguage}
-          selectedCurrency={selectedCurrency}
-          onCurrencyChange={setSelectedCurrency}
-          config={config}
-        />;
-      case 'admin':
-        return isAdmin ? (
-          <AdminPanel 
-            opportunities={opportunities} 
-            investors={investors} 
-            onAdd={handleSaveOpportunity}
-            onDelete={handleDeleteOpportunity}
-            onBulkDeleteOpps={handleBulkDeleteOpps}
-            onBulkDeleteInvestors={handleBulkDeleteInvestors}
-            onBulkApproveInvestors={handleBulkApproveInvestors}
-            onBulkRejectInvestors={handleBulkRejectInvestors}
-            onGiveReturn={handleGiveReturn}
-            onSendKYCMessage={handleSendKYCMessage}
-            onSaveInvestor={handleSaveInvestor}
-            onDeleteInvestor={handleDeleteInvestor}
-            onAddNotification={handleAddNotification}
-            onInvest={handleInvest}
-            onLogout={handleLogout}
-            userInvestments={userInvestments}
-            paymentHistory={paymentHistory}
-            returns={returns}
-            withdrawals={withdrawals}
-            onUpdateWithdrawalStatus={handleUpdateWithdrawalStatus}
-            testimonials={testimonials}
-            onSaveTestimonial={handleSaveTestimonial}
-            onDeleteTestimonial={handleDeleteTestimonial}
-            partners={partners}
-            onSavePartner={handleSavePartner}
-            onDeletePartner={handleDeletePartner}
-            teamMembers={teamMembers}
-            onSaveTeamMember={handleSaveTeamMember}
-            onDeleteTeamMember={handleDeleteTeamMember}
-            faqs={faqs}
-            onSaveFAQ={handleSaveFAQ}
-            onDeleteFAQ={handleDeleteFAQ}
-            faqCategories={faqCategories}
-            onSaveFAQCategory={handleSaveFAQCategory}
-            onDeleteFAQCategory={handleDeleteFAQCategory}
-            blogs={blogs}
-            onSaveBlog={handleSaveBlog}
-            onDeleteBlog={handleDeleteBlog}
-            formatCurrency={formatCurrency}
-            t={t}
-            config={config}
-            onSaveConfig={setConfig}
-          />
-        ) : <LandingPage onNavigate={setCurrentView} formatCurrency={formatCurrency} t={t} testimonials={testimonials} loading={isLoading} />;
-      default: return <LandingPage onNavigate={setCurrentView} formatCurrency={formatCurrency} t={t} testimonials={testimonials} loading={isLoading} />;
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar 
@@ -1439,22 +1311,178 @@ const App: React.FC = () => {
       <LegalAcceptanceModal 
         isOpen={showLegalModal}
         onAccept={handleAcceptLegal}
-        onViewPrivacy={() => setCurrentView('privacy-policy')}
-        onViewTerms={() => setCurrentView('terms-conditions')}
+        onViewPrivacy={() => navigate('/privacy-policy')}
+        onViewTerms={() => navigate('/terms-conditions')}
       />
       <TawkChat user={currentUser} />
       <main className="flex-grow pt-20">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentView}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            {renderView()}
-          </motion.div>
-        </AnimatePresence>
+        <Routes>
+          <Route path="/" element={<LandingPage onNavigate={handleNavigate} formatCurrency={formatCurrency} t={t} testimonials={testimonials} loading={isLoading} />} />
+          <Route path="/home" element={<Navigate to="/" replace />} />
+          <Route path="/about" element={<AboutPage formatCurrency={formatCurrency} t={t} onNavigate={handleNavigate} testimonials={testimonials} />} />
+          <Route path="/why" element={<WhyChooseUs formatCurrency={formatCurrency} t={t} />} />
+          <Route path="/portfolio" element={
+            <PortfolioPage 
+              opportunities={opportunities} 
+              onInvest={handleInvest} 
+              isAdmin={isAdmin}
+              isLoggedIn={isLoggedIn}
+              currentUser={currentUser}
+              onDelete={handleDeleteOpportunity}
+              onEdit={handleSaveOpportunity}
+              onViewDetail={(id) => handleNavigate('opportunity-detail', id)}
+              formatCurrency={formatCurrency}
+              selectedCurrency={selectedCurrency}
+              t={t}
+            />
+          } />
+          <Route path="/contact" element={<ContactPage formatCurrency={formatCurrency} t={t} />} />
+          <Route path="/our-team" element={<OurTeamPage t={t} teamMembers={teamMembers} />} />
+          <Route path="/our-partners" element={<OurPartnersPage partners={partners} />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage config={config} />} />
+          <Route path="/terms-conditions" element={<TermsConditionsPage config={config} />} />
+          <Route path="/faq" element={<FAQPage faqs={faqs} categories={faqCategories} />} />
+          <Route path="/testimonials" element={<TestimonialsPage language={language} onNavigate={handleNavigate} testimonials={testimonials} />} />
+          <Route path="/testimonial-detail" element={
+            selectedTestimonial ? 
+            <TestimonialDetailPage testimonial={selectedTestimonial} onBack={() => handleNavigate('testimonials')} language={language} /> :
+            <Navigate to="/testimonials" replace />
+          } />
+          <Route path="/blog" element={<BlogPage onNavigate={handleNavigate} t={t} blogs={blogs} />} />
+          <Route path="/blog-detail" element={
+            selectedBlogPost ? 
+            <BlogDetailPage post={selectedBlogPost} onBack={() => handleNavigate('blog')} onNavigate={handleNavigate} t={t} /> :
+            <Navigate to="/blog" replace />
+          } />
+          <Route path="/startup-investment" element={<StartupInvestmentPage onNavigate={handleNavigate} />} />
+          <Route path="/security-trust" element={<SecurityTrustPage onNavigate={handleNavigate} />} />
+          <Route path="/how-it-works" element={<HowItWorksPage onNavigate={handleNavigate} />} />
+          <Route path="/opportunity-detail" element={
+            (() => {
+              const opp = opportunities.find(o => o.id === selectedOpportunityId);
+              if (!opp) return <Navigate to="/portfolio" replace />;
+              return (
+                <OpportunityDetailPage 
+                  opportunity={opp} 
+                  onBack={() => navigate('/portfolio')} 
+                  onInvest={handleInvest} 
+                  isLoggedIn={isLoggedIn}
+                  currentUser={currentUser}
+                  formatCurrency={formatCurrency}
+                  selectedCurrency={selectedCurrency}
+                  t={t}
+                />
+              );
+            })()
+          } />
+          
+          <Route path="/login" element={
+            isLoggedIn ? <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace /> :
+            <AuthForm 
+              type="login" 
+              onToggleType={() => navigate('/register')} 
+              onSuccess={(admin) => {
+                setIsLoggedIn(true);
+                setIsAdmin(admin);
+                navigate(admin ? '/admin' : '/dashboard');
+              }} t={t} 
+            />
+          } />
+          
+          <Route path="/register" element={
+            isLoggedIn ? <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace /> :
+            <AuthForm 
+              type="register" 
+              onToggleType={() => navigate('/login')} 
+              onSuccess={(admin) => {
+                setIsLoggedIn(true);
+                setIsAdmin(admin);
+                navigate(admin ? '/admin' : '/dashboard');
+              }} t={t} 
+            />
+          } />
+
+          <Route path="/dashboard" element={
+            isLoggedIn ? 
+            <UserDashboard 
+              opportunities={opportunities} 
+              userInvestments={userInvestments} 
+              paymentHistory={paymentHistory}
+              returns={returns}
+              withdrawals={withdrawals}
+              onWithdraw={handleWithdraw}
+              onInvest={handleInvest}
+              investmentGoal={investmentGoal}
+              onUpdateGoal={setInvestmentGoal}
+              currentUser={currentUser}
+              onUpdateProfile={handleUpdateProfile}
+              onUploadKYC={handleUploadKYC}
+              onLogout={handleLogout}
+              activeTab={dashboardTab}
+              onTabChange={setDashboardTab}
+              onMarkNotificationRead={handleMarkNotificationRead}
+              onNavigate={handleNavigate}
+              partners={partners}
+              formatCurrency={formatCurrency}
+              t={t}
+              language={language}
+              onLanguageChange={setLanguage}
+              selectedCurrency={selectedCurrency}
+              onCurrencyChange={setSelectedCurrency}
+              config={config}
+            /> :
+            <Navigate to="/login" replace />
+          } />
+
+          <Route path="/admin" element={
+            isLoggedIn && isAdmin ?
+            <AdminPanel 
+              opportunities={opportunities} 
+              investors={investors} 
+              onAdd={handleSaveOpportunity}
+              onDelete={handleDeleteOpportunity}
+              onBulkDeleteOpps={handleBulkDeleteOpps}
+              onBulkDeleteInvestors={handleBulkDeleteInvestors}
+              onBulkApproveInvestors={handleBulkApproveInvestors}
+              onBulkRejectInvestors={handleBulkRejectInvestors}
+              onGiveReturn={handleGiveReturn}
+              onSendKYCMessage={handleSendKYCMessage}
+              onSaveInvestor={handleSaveInvestor}
+              onDeleteInvestor={handleDeleteInvestor}
+              onAddNotification={handleAddNotification}
+              onInvest={handleInvest}
+              onLogout={handleLogout}
+              userInvestments={userInvestments}
+              paymentHistory={paymentHistory}
+              returns={returns}
+              withdrawals={withdrawals}
+              onUpdateWithdrawalStatus={handleUpdateWithdrawalStatus}
+              testimonials={testimonials}
+              onSaveTestimonial={handleSaveTestimonial}
+              onDeleteTestimonial={handleDeleteTestimonial}
+              partners={partners}
+              onSavePartner={handleSavePartner}
+              onDeletePartner={handleDeletePartner}
+              teamMembers={teamMembers}
+              onSaveTeamMember={handleSaveTeamMember}
+              onDeleteTeamMember={handleDeleteTeamMember}
+              faqs={faqs}
+              onSaveFAQ={handleSaveFAQ}
+              onDeleteFAQ={handleDeleteFAQ}
+              faqCategories={faqCategories}
+              onSaveFAQCategory={handleSaveFAQCategory}
+              onDeleteFAQCategory={handleDeleteFAQCategory}
+              blogs={blogs}
+              onSaveBlog={handleSaveBlog}
+              onDeleteBlog={handleDeleteBlog}
+              formatCurrency={formatCurrency}
+              t={t}
+              config={config}
+              onSaveConfig={setConfig}
+            /> :
+            <Navigate to="/login" replace />
+          } />
+        </Routes>
       </main>
       <Footer onNavigate={handleNavigate} logo={config.logo} />
 

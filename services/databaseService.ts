@@ -108,3 +108,21 @@ export const addReturn = async (returnRecord: Omit<ReturnRecord, "id">) => {
   if (error) throw error;
   return data;
 };
+
+// --- Partners ---
+export const getPartners = async (): Promise<Partner[]> => {
+  const { data, error } = await supabase.from('partners').select('*');
+  if (error) throw error;
+  return data as Partner[];
+};
+
+export const savePartner = async (partner: Partner) => {
+  const { id, ...data } = partner;
+  const { error } = await supabase.from('partners').upsert({ id, ...data });
+  if (error) throw error;
+};
+
+export const deletePartner = async (id: string) => {
+  const { error } = await supabase.from('partners').delete().eq('id', id);
+  if (error) throw error;
+};
