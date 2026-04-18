@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
+    "seed": "tsx seed.ts",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
   },

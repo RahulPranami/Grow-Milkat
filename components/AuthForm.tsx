@@ -107,10 +107,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ type, onSuccess, onToggleType, t })
 
   const handlePaymentSubmit = async () => {
     try {
-      await authService.signUp(email, password, fullName, role as any);
+      const user = await authService.signUp(email, password, fullName, role as any);
       setStep('complete');
       setTimeout(() => {
-        onSuccess(false, { email, fullName, referredBy });
+        onSuccess(role === 'admin', { email, fullName, referredBy });
       }, 1500);
     } catch (err: any) {
       alert(err.message || "Registration failed");
@@ -193,35 +193,37 @@ const AuthForm: React.FC<AuthFormProps> = ({ type, onSuccess, onToggleType, t })
           )}
         </div>
         
-        <div className="pt-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block">I am an</label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setRole('user')}
-              className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                role === 'user' 
-                  ? 'border-primary bg-primary/5 text-primary shadow-sm' 
-                  : 'border-slate-100 text-slate-500 hover:border-slate-200'
-              }`}
-            >
-              <User className="w-4 h-4" />
-              <span className="text-xs font-bold">Investor</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole('admin')}
-              className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                role === 'admin' 
-                  ? 'border-primary bg-primary/5 text-primary shadow-sm' 
-                  : 'border-slate-100 text-slate-500 hover:border-slate-200'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              <span className="text-xs font-bold">Admin</span>
-            </button>
+        {type === 'register' && (
+          <div className="pt-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block">I am an</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setRole('user')}
+                className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                  role === 'user' 
+                    ? 'border-primary bg-primary/5 text-primary shadow-sm' 
+                    : 'border-slate-100 text-slate-500 hover:border-slate-200'
+                }`}
+              >
+                <User className="w-4 h-4" />
+                <span className="text-xs font-bold">Investor</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('admin')}
+                className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                  role === 'admin' 
+                    ? 'border-primary bg-primary/5 text-primary shadow-sm' 
+                    : 'border-slate-100 text-slate-500 hover:border-slate-200'
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                <span className="text-xs font-bold">Admin</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="space-y-4">
