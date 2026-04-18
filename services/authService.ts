@@ -36,7 +36,7 @@ export const signUp = async (email: string, pass: string, fullName: string, role
   const investorData: Partial<Investor> = {
     name: fullName,
     email: email,
-    kycStatus: 'Verified',
+    kycStatus: 'Pending',
     totalInvested: 0,
     activeAssets: 0,
     totalReturns: 0,
