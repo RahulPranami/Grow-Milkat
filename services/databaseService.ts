@@ -198,3 +198,35 @@ export const getAllReferrals = async () => {
   if (error) throw error;
   return data;
 };
+
+export const processReferralReward = async (referredId: string, rewardAmount: number) => {
+  // 1. Find the referral record
+  const { data: referral, error: findError } = await supabase
+    .from('referrals')
+    .select('*')
+    .eq('referredId', referredId)
+    .eq('status', 'Pending')
+    .single();
+
+  if (findError || !referral) return null;
+
+  // 2. Update referral status
+  await supabase
+    .from('referrals')
+    .update({ 
+      status: 'Active', 
+      rewardAmount: rewardAmount 
+    })
+    .eq('id', referral.id);
+
+  // 3. Add reward to referrer's wallet
+  await addWalletTransaction({
+    investorId: referral.referrerId,
+    amount: rewardAmount,
+    type: 'Referral',
+    description: `Referral reward for user signup and investment`,
+    status: 'Completed'
+  });
+
+  return referral.referrerId;
+};

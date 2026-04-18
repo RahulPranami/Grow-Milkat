@@ -954,6 +954,13 @@ const App: React.FC = () => {
         };
         setCurrentUser(updatedUser);
         setInvestors(prev => prev.map(inv => inv.id === targetId ? updatedUser : inv));
+
+        // 5. Process Referral Reward if it's the first investment
+        const isFirstInvestment = userInvestments.filter(inv => inv.investorId === targetId).length === 0;
+        if (isFirstInvestment) {
+          const rewardAmount = selectedCurrency === 'INR' ? 1000 : 10;
+          await dbService.processReferralReward(targetId, rewardAmount);
+        }
       }
 
       // Email Trigger
