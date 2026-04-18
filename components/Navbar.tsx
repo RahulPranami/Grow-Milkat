@@ -62,10 +62,9 @@ const Navbar: React.FC<NavbarProps> = ({
         <div className="flex justify-between h-20 items-center">
           <div className="flex items-center cursor-pointer" onClick={() => handleNavClick('home')}>
             <img 
-              src={logo || "https://storage.googleapis.com/full-stack-assets/grow-milkat-logo.png"} 
+              src={logo || "/Grow Milkat - Black.png"} 
               alt="Grow Milkat Logo" 
               className="h-16 w-auto object-contain max-w-[240px]"
-              referrerPolicy="no-referrer"
             />
           </div>
 

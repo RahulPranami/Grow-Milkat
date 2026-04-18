@@ -16,10 +16,9 @@ const Footer: React.FC<FooterProps> = ({ onNavigate, logo }) => {
           <div className="space-y-6 text-center sm:text-left">
             <div className="flex items-center justify-center sm:justify-start text-white cursor-pointer" onClick={() => onNavigate('home')}>
               <img 
-                src={logo || "https://storage.googleapis.com/full-stack-assets/grow-milkat-logo.png"} 
+                src={logo || "/Grow Milkat - White.png"} 
                 alt="Grow Milkat Logo" 
-                className="h-14 w-auto brightness-0 invert object-contain max-w-[200px]"
-                referrerPolicy="no-referrer"
+                className="h-14 w-auto object-contain max-w-[200px]"
               />
             </div>
             <p className="text-sm leading-relaxed max-w-xs mx-auto sm:mx-0">

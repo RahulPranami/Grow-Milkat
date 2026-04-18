@@ -484,6 +484,12 @@ const App: React.FC = () => {
     // Initial data fetch
     const fetchData = async () => {
       setIsLoading(true);
+      
+      // Safety timeout to prevent infinite skeleton loading
+      const safetyTimeout = setTimeout(() => {
+        setIsLoading(false);
+      }, 5000);
+
       try {
         const opps = await dbService.getOpportunities();
         setOpportunities(opps);
@@ -505,6 +511,7 @@ const App: React.FC = () => {
       } catch (err) {
         console.error("Error fetching data:", err);
       } finally {
+        clearTimeout(safetyTimeout);
         setIsLoading(false);
       }
     };
@@ -611,8 +618,8 @@ const App: React.FC = () => {
     maintenanceMode: false,
     securityLevel: 'Enterprise',
     kycRequirement: 'Tier 2',
-    logo: 'https://i.ibb.co/FbxZqh5F/Grow-Milkat.png',
-    growMilkatLogo: '',
+    logo: '/Grow Milkat - Black.png',
+    growMilkatLogo: '/Grow Milkat - Black.png',
     ownerSignature: '',
     privacyPolicy: [
       {
