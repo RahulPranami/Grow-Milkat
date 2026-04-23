@@ -170,3 +170,44 @@ CREATE POLICY "Users can update their own data" ON users FOR UPDATE USING (auth.
 CREATE POLICY "Users can view their own investments" ON investments FOR SELECT USING (auth.uid() = "investorId");
 CREATE POLICY "Users can view their own withdrawals" ON withdrawals FOR SELECT USING (auth.uid() = "investorId");
 CREATE POLICY "Users can view their own returns" ON returns FOR SELECT USING (auth.uid() = "investorId");
+
+-- Testimonials
+CREATE TABLE testimonials (
+  "id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  "type" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "role" TEXT,
+  "company" TEXT,
+  "avatar" TEXT,
+  "successStory" JSONB,
+  "videoUrl" TEXT,
+  "imageUrl" TEXT,
+  "textTestimonial" TEXT,
+  "rating" NUMERIC,
+  "createdAt" TIMESTAMPTZ DEFAULT now()
+);
+
+-- Blogs
+CREATE TABLE blogs (
+  "id" UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  "title" TEXT NOT NULL,
+  "excerpt" TEXT,
+  "content" TEXT,
+  "blocks" JSONB,
+  "author" TEXT,
+  "authorRole" TEXT,
+  "authorAvatar" TEXT,
+  "date" TEXT,
+  "category" TEXT,
+  "imageUrl" TEXT,
+  "featuredImageUrl" TEXT,
+  "readTime" TEXT,
+  "tags" TEXT[],
+  "createdAt" TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE blogs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public testimonials are viewable by everyone" ON testimonials FOR SELECT USING (true);
+CREATE POLICY "Public blogs are viewable by everyone" ON blogs FOR SELECT USING (true);

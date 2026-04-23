@@ -413,64 +413,7 @@ const App: React.FC = () => {
     detectCurrency();
   }, []);
 
-  const [blogs, setBlogs] = useState<BlogPost[]>([
-    {
-      id: '1',
-      title: 'The Rise of Fractional Real Estate in 2026',
-      excerpt: 'How blockchain and SPVs are democratizing high-value asset ownership for the next generation of investors.',
-      content: 'Full content here...',
-      author: 'Vikram Sethi',
-      authorRole: 'Chief Investment Officer',
-      authorAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150&h=150',
-      date: 'March 28, 2026',
-      category: 'Market Trends',
-      imageUrl: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=1000',
-      readTime: '6 min read',
-      tags: ['Real Estate', 'Fractional Ownership', 'Wealth Tech']
-    },
-    {
-      id: '2',
-      title: 'Understanding the G.R.O.W. Framework',
-      excerpt: 'A deep dive into our proprietary vetting protocol that ensures institutional-grade security for your capital.',
-      content: 'Full content here...',
-      author: 'Elena Rodriguez',
-      authorRole: 'Head of Risk Management',
-      authorAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150',
-      date: 'March 24, 2026',
-      category: 'Education',
-      imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1000',
-      readTime: '8 min read',
-      tags: ['Risk Management', 'Governance', 'Investment Strategy']
-    },
-    {
-      id: '3',
-      title: 'Why Hospitality Assets are Outperforming in Q1',
-      excerpt: 'Analyzing the surge in luxury hotel yields across Europe and the Middle East.',
-      content: 'Full content here...',
-      author: 'Marcus Thorne',
-      authorRole: 'Hospitality Specialist',
-      authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150',
-      date: 'March 20, 2026',
-      category: 'Assets Analysis',
-      imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1000',
-      readTime: '5 min read',
-      tags: ['Hotels', 'Hospitality', 'Yield Analysis']
-    },
-    {
-      id: '4',
-      title: 'Diversification: Beyond Stocks and Bonds',
-      excerpt: 'Why alternative assets like land and startups are essential for a resilient 2026 portfolio.',
-      content: 'Full content here...',
-      author: 'Sarah Jenkins',
-      authorRole: 'Portfolio Strategist',
-      authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150',
-      date: 'March 15, 2026',
-      category: 'Wealth Management',
-      imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=1000',
-      readTime: '7 min read',
-      tags: ['Diversification', 'Alternative Assets', 'Portfolio Growth']
-    }
-  ]);
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -478,7 +421,7 @@ const App: React.FC = () => {
   const [userInvestments, setUserInvestments] = useState<InvestmentRecord[]>([]);
   const [returns, setReturns] = useState<ReturnRecord[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(MOCK_TESTIMONIALS);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   
   const [paymentHistory, setPaymentHistory] = useState<PaymentRecord[]>([]);
 
@@ -526,6 +469,12 @@ const App: React.FC = () => {
 
         const pts = await dbService.getPartners();
         setPartners(pts);
+
+        const fetchedBlogs = await dbService.getBlogs();
+        setBlogs(fetchedBlogs);
+
+        const fetchedTestimonials = await dbService.getTestimonials();
+        setTestimonials(fetchedTestimonials);
         
         // If admin, fetch all data
         if (isAdmin) {
@@ -1063,16 +1012,28 @@ const App: React.FC = () => {
     setOpportunities(prev => prev.filter(o => o.id !== id));
   };
 
-  const handleSaveBlog = (blog: BlogPost) => {
-    setBlogs(prev => {
-      const exists = prev.find(b => b.id === blog.id);
-      if (exists) return prev.map(b => b.id === blog.id ? blog : b);
-      return [blog, ...prev];
-    });
+  const handleSaveBlog = async (blog: BlogPost) => {
+    try {
+      await dbService.saveBlog(blog);
+      setBlogs(prev => {
+        const exists = prev.find(b => b.id === blog.id);
+        if (exists) return prev.map(b => b.id === blog.id ? blog : b);
+        return [blog, ...prev];
+      });
+    } catch (err) {
+      console.error("Error saving blog:", err);
+      alert("Failed to save blog. Please try again.");
+    }
   };
 
-  const handleDeleteBlog = (id: string) => {
-    setBlogs(prev => prev.filter(b => b.id !== id));
+  const handleDeleteBlog = async (id: string) => {
+    try {
+      await dbService.deleteBlog(id);
+      setBlogs(prev => prev.filter(b => b.id !== id));
+    } catch (err) {
+      console.error("Error deleting blog:", err);
+      alert("Failed to delete blog. Please try again.");
+    }
   };
 
   const handleBulkDeleteOpps = (ids: string[]) => {
@@ -1361,16 +1322,28 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveTestimonial = (testimonial: Testimonial) => {
-    setTestimonials(prev => {
-      const exists = prev.find(t => t.id === testimonial.id);
-      if (exists) return prev.map(t => t.id === testimonial.id ? testimonial : t);
-      return [testimonial, ...prev];
-    });
+  const handleSaveTestimonial = async (testimonial: Testimonial) => {
+    try {
+      await dbService.saveTestimonial(testimonial);
+      setTestimonials(prev => {
+        const exists = prev.find(t => t.id === testimonial.id);
+        if (exists) return prev.map(t => t.id === testimonial.id ? testimonial : t);
+        return [testimonial, ...prev];
+      });
+    } catch (err) {
+      console.error("Error saving testimonial:", err);
+      alert("Failed to save testimonial. Please try again.");
+    }
   };
 
-  const handleDeleteTestimonial = (id: string) => {
-    setTestimonials(prev => prev.filter(t => t.id !== id));
+  const handleDeleteTestimonial = async (id: string) => {
+    try {
+      await dbService.deleteTestimonial(id);
+      setTestimonials(prev => prev.filter(t => t.id !== id));
+    } catch (err) {
+      console.error("Error deleting testimonial:", err);
+      alert("Failed to delete testimonial. Please try again.");
+    }
   };
 
   const handleSavePartner = (partner: Partner) => {

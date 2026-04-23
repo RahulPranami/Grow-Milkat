@@ -6,7 +6,10 @@ import {
   InvestmentRecord, 
   WithdrawalRecord, 
   ReturnRecord,
-  Notification
+  Notification,
+  Partner,
+  BlogPost,
+  Testimonial
 } from "../types";
 
 // --- Assets / Opportunities ---
@@ -229,4 +232,40 @@ export const processReferralReward = async (referredId: string, rewardAmount: nu
   });
 
   return referral.referrerId;
+};
+
+// --- Testimonials ---
+export const getTestimonials = async (): Promise<Testimonial[]> => {
+  const { data, error } = await supabase.from('testimonials').select('*');
+  if (error) throw error;
+  return data as Testimonial[];
+};
+
+export const saveTestimonial = async (testimonial: Testimonial) => {
+  const { id, ...data } = testimonial;
+  const { error } = await supabase.from('testimonials').upsert({ id, ...data });
+  if (error) throw error;
+};
+
+export const deleteTestimonial = async (id: string) => {
+  const { error } = await supabase.from('testimonials').delete().eq('id', id);
+  if (error) throw error;
+};
+
+// --- Blogs ---
+export const getBlogs = async (): Promise<BlogPost[]> => {
+  const { data, error } = await supabase.from('blogs').select('*');
+  if (error) throw error;
+  return data as BlogPost[];
+};
+
+export const saveBlog = async (blog: BlogPost) => {
+  const { id, ...data } = blog;
+  const { error } = await supabase.from('blogs').upsert({ id, ...data });
+  if (error) throw error;
+};
+
+export const deleteBlog = async (id: string) => {
+  const { error } = await supabase.from('blogs').delete().eq('id', id);
+  if (error) throw error;
 };
